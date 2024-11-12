@@ -5,40 +5,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * {
-      font-family: sans-serif;
-    }
-
-    html,
-    body {
-      height: 100%;
-      width: 100%;
-      align-content: center;
-    }
-
-    .game-container {
-      margin: auto;
-      width: 40vw;
-      height: 40vw;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(4, 1fr);
-      border: 5px solid #9C8A7B;
-      gap: 0;
-    }
-
-    .game-tile {
-      border: 5px solid #9C8A7B;
-      width: 100%;
-      height: 100%;
-      align-content: center;
-      text-align: center;
-      overflow: hidden;
-      box-sizing: border-box;
-      background-color: #BDAC97;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="2048.js"></script>
   <title>2048</title>
 </head>
 
@@ -53,7 +21,7 @@
     <div class="game-tile">64</div>
     <div class="game-tile">128</div>
     <div class="game-tile">256</div>
-    <div class="game-tile">512 </div>
+    <div class="game-tile">512</div>
     <div class="game-tile">1024</div>
     <div class="game-tile">2048</div>
     <div class="game-tile"></div>
@@ -62,10 +30,6 @@
     <div class="game-tile"></div>
   </div>
   <script>
-    let palette = new Map([
-    ])
-
-
   </script>
 </body>
 
