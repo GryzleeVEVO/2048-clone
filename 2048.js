@@ -13,6 +13,9 @@ const palette = new Map([
   ["2048", "#edc22e"],
 ]);
 
+const size = 4;
+
+// REVIEW : Move the actual game logic to a separate file?
 // class Board {}
 
 /**
@@ -59,44 +62,48 @@ function colorTiles() {
 }
 
 /**
- * @param {string} key
+ * @param {Element} orig
+ * @param {Element} dest
  */
-function update(key) {
-  let tiles = document.querySelectorAll(".game-tile");
-  const size = 4;
+function swapTiles(orig, dest) {
+  dest.innerHTML = orig.innerHTML;
+  orig.innerHTML = "";
+}
 
-  // TODO: Let's just do one direction and with no adding
-  // For now, down-to-up
-  for (let i = 0; i < size; i++) {
+/**
+ * @param {Element} orig
+ * @param {Element} dest
+ */
+function addTiles(orig, dest) {
+  let total = (parseInt(dest.innerHTML) + parseInt(orig.innerHTML)).toString();
+  dest.innerHTML = total;
+  orig.innerHTML = "";
+}
+
+function upCheck() {
+  let tiles = document.querySelectorAll(".game-tile");
+
+  for (let i = 1; i < size; i++) {
     for (let j = 0; j < size; j++) {
       let tile = tiles[j + size * i];
-
-      // Nothing to do for first row/column
-      if (i === 0) continue;
-
-      // Nothing to do if empty
-      if (!tile.innerHTML) continue;
+      if (!tile.innerHTML) continue; // Square is empty
 
       // Find first empty square
       let next_i = i;
       let next_j = j;
 
-      for (i2 = i - 1; i2 >= 0; i2--) {
+      for (let i2 = i - 1; i2 >= 0; i2--) {
         if (tiles[j + size * i2].innerHTML) break;
         next_i = i2;
       }
 
       // Check if next square has a number
       if (next_i - 1 >= 0) {
-        let nextTile = tiles[j + size * (next_i - 1)];
+        let nextTile = tiles[next_j + size * (next_i - 1)];
 
-        if (nextTile.innerHTML && nextTile.innerHTML == tile.innerHTML) {
-          let total = (
-            parseInt(nextTile.innerHTML) + parseInt(tile.innerHTML)
-          ).toString();
-
-          nextTile.innerHTML = total;
-          tile.innerHTML = "";
+        // If equal, add them up
+        if (nextTile.innerHTML === tile.innerHTML) {
+          addTiles(tile, nextTile);
           continue;
         }
       }
@@ -104,12 +111,143 @@ function update(key) {
       // Don´t move if not necessary
       if (next_i === i && next_j === j) continue;
 
-      // Else, just swap the squares
-      let empty = tiles[next_j + size * next_i];
-      empty.innerHTML = tile.innerHTML;
-      tile.innerHTML = "";
+      swapTiles(tile, tiles[next_j + size * next_i]);
     }
   }
+}
+
+function downCheck() {
+  let tiles = document.querySelectorAll(".game-tile");
+
+  for (let i = 2; i >= 0; i--) {
+    for (let j = 3; j >= 0; j--) {
+      let tile = tiles[j + size * i];
+      if (!tile.innerHTML) continue; // Square is empty
+
+      // Find first empty square
+      let next_i = i;
+      let next_j = j;
+
+      for (let i2 = i + 1; i2 < size; i2++) {
+        if (tiles[j + size * i2].innerHTML) break;
+        next_i = i2;
+      }
+
+      // Check if next square has a number
+      if (next_i + 1 < size) {
+        let nextTile = tiles[next_j + size * (next_i + 1)];
+
+        // If equal, add them up
+        if (nextTile.innerHTML === tile.innerHTML) {
+          addTiles(tile, nextTile);
+          continue;
+        }
+      }
+
+      // Don´t move if not necessary
+      if (next_i === i && next_j === j) continue;
+
+      swapTiles(tile, tiles[next_j + size * next_i]);
+    }
+  }
+}
+
+function leftCheck() {
+  let tiles = document.querySelectorAll(".game-tile");
+
+  for (let j = 1; j < size; j++) {
+    for (let i = 0; i < size; i++) {
+      let tile = tiles[j + size * i];
+      if (!tile.innerHTML) continue; // Square is empty
+
+      // Find first empty square
+      let next_i = i;
+      let next_j = j;
+
+      for (let j2 = j - 1; j2 >= 0; j2--) {
+        if (tiles[j2 + size * i].innerHTML) break;
+        next_j = j2;
+      }
+
+      // Check if next square has a number
+      if (next_j - 1 >= 0) {
+        let nextTile = tiles[next_j - 1 + size * next_i];
+
+        // If equal, add them up
+        if (nextTile.innerHTML === tile.innerHTML) {
+          addTiles(tile, nextTile);
+          continue;
+        }
+      }
+
+      // Don´t move if not necessary
+      if (next_i === i && next_j === j) continue;
+
+      swapTiles(tile, tiles[next_j + size * next_i]);
+    }
+  }
+}
+
+function rightCheck() {
+  let tiles = document.querySelectorAll(".game-tile");
+
+  for (let j = 2; j >= 0; j--) {
+    for (let i = 3; i >= 0; i--) {
+      let tile = tiles[j + size * i];
+      if (!tile.innerHTML) continue; // Square is empty
+
+      // Find first empty square
+      let next_i = i;
+      let next_j = j;
+
+      for (let j2 = j + 1; j2 < size; j2++) {
+        if (tiles[j2 + size * i].innerHTML) break;
+        next_j = j2;
+      }
+
+      // Check if next square has a number
+      if (next_j + 1 < size) {
+        let nextTile = tiles[next_j + 1 + size * next_i];
+
+        // If equal, add them up
+        if (nextTile.innerHTML === tile.innerHTML) {
+          addTiles(tile, nextTile);
+          continue;
+        }
+      }
+
+      // Don´t move if not necessary
+      if (next_i === i && next_j === j) continue;
+
+      swapTiles(tile, tiles[next_j + size * next_i]);
+    }
+  }
+}
+
+/**
+ * @param {string} key
+ */
+function update(key) {
+  // TODO: Now, make it work in all directions
+  // Each direction must be somewhat handled separately, since processing which
+  // tiles go where must be done in reverse direction
+  switch (key) {
+    case "ArrowUp":
+      upCheck();
+      break;
+    case "ArrowDown":
+      downCheck();
+      break;
+    case "ArrowLeft":
+      leftCheck();
+      break;
+    case "ArrowRight":
+      rightCheck();
+      break;
+  }
+
+  // Generate new tile
+  pickAndSetRandomCell(16);
 
   // Color tiles accordingly
   colorTiles();
