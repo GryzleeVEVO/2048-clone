@@ -12,12 +12,12 @@
 
 /* TODO
   [ ] Add win state
-  [ ] Add fail state + restart button
+  [ ] Add fail state
   [ ] Add board animations
-  [ ] Add scoreboard
   [ ] Save state in local storage
   [ ] A more elegant way to update board
   [ ] Allow for boards with different sizes
+  [ ] Fix styles so that it zooms in and out properly
 */
 
 // Colors have been ripped from the classic version of 2048's CSS style
@@ -39,6 +39,10 @@ const backgroundColor = "#bdac97";
 const textColor = "#756452";
 const textColorAlt = "#ffffff";
 
+let tiles_grid_elem = document.querySelectorAll(".game-tile");
+let score_elem = document.querySelector("#score-sum");
+let restart_button_elem = document.querySelector("#restart-button");
+
 /**
  * @param {number} min
  * @param {number} max
@@ -54,13 +58,12 @@ function getRandomInt(min, max) {
 class Board {
   size = 4;
   numTiles = this.size * this.size;
+  score = 0;
 
-  /// Chance for spawning a 4 instead of a 2. Larger = more improbable
+  // Chance for spawning a 4 instead of a 2. Larger = more improbable
   #chanceForFour = 40;
 
-  /**
-   * Encoded directions for update function
-   */
+  /** Encoded directions for update function */
   #dir = {
     ArrowUp: {
       x_start: this.size - 1,
@@ -89,6 +92,10 @@ class Board {
   constructor() {
     this.setRandomTile();
     this.setRandomTile();
+    // this.data[0][0] = 2;
+    // this.data[0][1] = 2;
+    // this.data[0][2] = 2;
+    // this.data[0][3] = 2;
   }
 
   /**
@@ -100,6 +107,18 @@ class Board {
     let moved = false;
 
     // TODO: Maybe find a way to reduce the number of checks required
+    /* FIXME: This situation:
+            4 4 4
+        When <- is pressed should show:
+            8 4
+        But it shows
+            4 8
+        Also this situation:
+            2 2 2 2
+        Turns into:
+            4 - 4 -
+        Maybe check pairings first
+    */
     for (let i = x_start; i >= 0 && i < this.size; i += x_step || 1) {
       for (let j = y_start; j >= 0 && j < this.size; j += y_step || 1) {
         // If empty, skip
@@ -129,6 +148,7 @@ class Board {
           pair.y < this.size &&
           this.data[pair.x][pair.y] === this.data[i][j]
         ) {
+          this.score += this.data[pair.x][pair.y] + this.data[i][j];
           this.data[pair.x][pair.y] += this.data[i][j];
           this.data[i][j] = 0;
           moved = true;
@@ -169,17 +189,16 @@ class Board {
  * @param {Board} board
  */
 function updateBoardView(board) {
-  let tiles = document.querySelectorAll(".game-tile");
   // @ts-ignore
-  console.assert(tiles, "Game board not in DOM!!!");
+  console.assert(tiles_grid_elem, "Game board not in DOM!!!");
   console.assert(
-    tiles.length === board.numTiles,
+    tiles_grid_elem.length === board.numTiles,
     "Mismatch between number of DOM tiles and stored tiles"
   );
 
   for (let i = 0; i < board.size; i++) {
     for (let j = 0; j < board.size; j++) {
-      let tile = tiles[j + board.size * i];
+      let tile = tiles_grid_elem[j + board.size * i];
       let content = board.data[i][j] === 0 ? "" : board.data[i][j].toString();
 
       // Update inner text
@@ -199,6 +218,8 @@ function updateBoardView(board) {
           : textColorAlt;
     }
   }
+
+  score_elem.innerHTML = board.score.toString();
 }
 
 window.addEventListener("keydown", (e) => {
@@ -208,12 +229,21 @@ window.addEventListener("keydown", (e) => {
     case "ArrowLeft":
     case "ArrowRight":
       e.preventDefault();
+      board.update(e.key);
+      break;
+    case "r":
+      e.preventDefault();
+      board = new Board();
       break;
     default:
       return;
   }
 
-  board.update(e.key);
+  updateBoardView(board);
+});
+
+restart_button_elem.addEventListener("click", (ev) => {
+  board = new Board();
   updateBoardView(board);
 });
 

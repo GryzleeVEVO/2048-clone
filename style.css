@@ -9,15 +9,29 @@ body {
   align-content: center;
 }
 
+button {
+  cursor: pointer;
+}
+
 .game-container {
-  margin: auto;
+  display: grid;
+  margin: 10px auto;
   width: 40vw;
   height: 40vw;
-  display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(4, 1fr);
   border: 5px solid #9c8a7b;
   gap: 0;
+}
+
+.score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: auto;
+  width: 40vw;
+  height: 5vw;
+  font-size: large;
 }
 
 .game-tile {
@@ -32,4 +46,13 @@ body {
   overflow: hidden;
   box-sizing: border-box;
   background-color: #bdac97;
+}
+
+#restart-button {
+  font-size: inherit;
+  height: min-content;
+  padding: 5px;
+  color: #f9f6f2;
+  background-color: #8f7a66;
+  border: 0;
 }
