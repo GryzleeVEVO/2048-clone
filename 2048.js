@@ -11,14 +11,14 @@
  */
 
 /* TODO
-  [ ] Add win state
-  [ ] Add fail state
   [ ] Add board animations
   [ ] Save state in local storage
   [ ] A more elegant way to update board
   [ ] Allow for boards with different sizes
   [ ] Fix styles so that it zooms in and out properly
 */
+
+"use strict";
 
 // Colors have been ripped from the classic version of 2048's CSS style
 const palette = new Map([
@@ -39,9 +39,10 @@ const backgroundColor = "#bdac97";
 const textColor = "#756452";
 const textColorAlt = "#ffffff";
 
-let tiles_grid_elem = document.querySelectorAll(".game-tile");
-let score_elem = document.querySelector("#score-sum");
-let restart_button_elem = document.querySelector("#restart-button");
+let game_container_tile = document.querySelectorAll(".game-tile");
+let score_sum = document.querySelector("#score-sum");
+let restart_button = document.querySelector("#restart-button");
+let win_loss_msg = document.querySelector(".win-loss-msg");
 
 /**
  * @param {number} min
@@ -55,15 +56,29 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled);
 }
 
-class Board {
+const GameState = {
+  Playing: "Playing",
+  Win: "Win",
+  Loss: "Loss",
+};
+
+class Game {
   size = 4;
   numTiles = this.size * this.size;
   score = 0;
 
+  #state = GameState.Playing;
+
+  get state() {
+    return this.#state;
+  }
+
   // Chance for spawning a 4 instead of a 2. Larger = more improbable
   #chanceForFour = 40;
 
-  /** Encoded directions for update function */
+  /**
+   * Encoded directions for update function
+   */
   #dir = {
     ArrowUp: {
       x_start: this.size - 1,
@@ -92,10 +107,6 @@ class Board {
   constructor() {
     this.setRandomTile();
     this.setRandomTile();
-    // this.data[0][0] = 2;
-    // this.data[0][1] = 2;
-    // this.data[0][2] = 2;
-    // this.data[0][3] = 2;
   }
 
   /**
@@ -103,6 +114,14 @@ class Board {
    * @param {string} key
    */
   update(key) {
+    if (this.#state !== GameState.Playing) return;
+
+    if (!this.isWin() && this.isLoss()) {
+      this.#state = GameState.Loss;
+      return;
+    }
+
+    // @ts-ignore
     let { x_start, y_start, x_step, y_step } = this.#dir[key];
     let moved = false;
 
@@ -165,13 +184,18 @@ class Board {
       }
     }
 
-    // Create new numbered tile
-    // TODO: Add check to see if the board is full in order to not spawn a new tile
-    if (moved) this.setRandomTile();
-    console.log(this.data);
+    if (this.isWin()) {
+      this.#state = GameState.Win;
+      return;
+    }
+
+    if (moved && this.isEmptyTileAvailable()) this.setRandomTile();
   }
 
-  /** Select a random empty tile and set its value to 2 or 4 */
+  /**
+   * Select a random empty tile and set its value to 2 or 4. There must be at
+   * least one empty tile available
+   */
   setRandomTile() {
     let i = 0;
     let j = 0;
@@ -183,23 +207,59 @@ class Board {
 
     this.data[i][j] = getRandomInt(0, this.#chanceForFour) === 0 ? 4 : 2;
   }
+
+  /**
+   * Check if 2048 is reached
+   * @returns {boolean}
+   */
+  isWin() {
+    return this.data.find((row) => row.includes(2048)) !== undefined;
+  }
+
+  /**
+   * Check if no more moves are available
+   * @returns {boolean}
+   */
+  isLoss() {
+    return !this.isEmptyTileAvailable() && !this.areAddMovesAvailable();
+  }
+
+  /**
+   * Check if there is an empty tile in the board
+   * @returns {boolean}
+   */
+  isEmptyTileAvailable() {
+    return this.data.find((row) => row.includes(0)) !== undefined;
+  }
+
+  /**
+   * Check if there are tiles that can be added up in any of the four directions
+   * @returns {boolean}
+   */
+  areAddMovesAvailable() {
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        if (
+          (i - 1 >= 0 && this.data[i - 1][j] === this.data[i][j]) ||
+          (i + 1 < this.size && this.data[i + 1][j] === this.data[i][j]) ||
+          (j - 1 >= 0 && this.data[i][j - 1] === this.data[i][j]) ||
+          (j + 1 < this.size && this.data[i][j + 1] === this.data[i][j])
+        )
+          return true;
+      }
+    }
+    return false;
+  }
 }
 
 /**
- * @param {Board} board
+ * @param {Game} game
  */
-function updateBoardView(board) {
-  // @ts-ignore
-  console.assert(tiles_grid_elem, "Game board not in DOM!!!");
-  console.assert(
-    tiles_grid_elem.length === board.numTiles,
-    "Mismatch between number of DOM tiles and stored tiles"
-  );
-
-  for (let i = 0; i < board.size; i++) {
-    for (let j = 0; j < board.size; j++) {
-      let tile = tiles_grid_elem[j + board.size * i];
-      let content = board.data[i][j] === 0 ? "" : board.data[i][j].toString();
+function updateBoardView(game) {
+  for (let i = 0; i < game.size; i++) {
+    for (let j = 0; j < game.size; j++) {
+      let tile = game_container_tile[j + game.size * i];
+      let content = game.data[i][j] === 0 ? "" : game.data[i][j].toString();
 
       // Update inner text
       tile.innerHTML = content;
@@ -219,7 +279,20 @@ function updateBoardView(board) {
     }
   }
 
-  score_elem.innerHTML = board.score.toString();
+  score_sum.innerHTML = game.score.toString();
+
+  switch (game.state) {
+    case GameState.Win:
+      win_loss_msg.innerHTML = "You won!!!";
+      break;
+    case GameState.Loss:
+      win_loss_msg.innerHTML = "You lost :(((";
+      break;
+    case GameState.Playing:
+    default:
+      win_loss_msg.innerHTML = "";
+      break;
+  }
 }
 
 window.addEventListener("keydown", (e) => {
@@ -229,23 +302,23 @@ window.addEventListener("keydown", (e) => {
     case "ArrowLeft":
     case "ArrowRight":
       e.preventDefault();
-      board.update(e.key);
+      game.update(e.key);
       break;
     case "r":
       e.preventDefault();
-      board = new Board();
+      game = new Game();
       break;
     default:
       return;
   }
 
-  updateBoardView(board);
+  updateBoardView(game);
 });
 
-restart_button_elem.addEventListener("click", (ev) => {
-  board = new Board();
-  updateBoardView(board);
+restart_button.addEventListener("click", (ev) => {
+  game = new Game();
+  updateBoardView(game);
 });
 
-let board = new Board();
-updateBoardView(board);
+let game = new Game();
+updateBoardView(game);

@@ -56,3 +56,7 @@ button {
   background-color: #8f7a66;
   border: 0;
 }
+
+.win-loss-msg {
+  text-align: center;
+}
