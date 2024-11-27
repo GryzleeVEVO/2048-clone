@@ -15,7 +15,7 @@
   [ ] Save state in local storage
   [ ] A more elegant way to update board
   [ ] Allow for boards with different sizes
-  [ ] Fix styles so that it zooms in and out properly
+  [ ] Fix styles so that it zooms in and out properly (well, fix styles in general)
 */
 
 "use strict";
@@ -73,31 +73,36 @@ class Game {
     return this.#state;
   }
 
-  // Chance for spawning a 4 instead of a 2. Larger = more improbable
-  #chanceForFour = 40;
+  // Chance for spawning a 4 instead of a 2. As in "1 out of x"
+  #chanceForFour = 10;
 
   /**
    * Encoded directions for update function
    */
   #dir = {
     ArrowUp: {
+      x_start: 0,
+      y_start: 0,
+      x_step: 1,
+      y_step: 0,
+    },
+    ArrowDown: {
       x_start: this.size - 1,
       y_start: 0,
       x_step: -1,
       y_step: 0,
     },
-    ArrowDown: { x_start: 0, y_start: 0, x_step: 1, y_step: 0 },
     ArrowLeft: {
-      x_start: 0,
-      y_start: this.size - 1,
-      x_step: 0,
-      y_step: -1,
-    },
-    ArrowRight: {
       x_start: 0,
       y_start: 0,
       x_step: 0,
       y_step: 1,
+    },
+    ArrowRight: {
+      x_start: 0,
+      y_start: this.size - 1,
+      x_step: 0,
+      y_step: -1,
     },
   };
 
@@ -105,8 +110,8 @@ class Game {
   data = Array.from({ length: this.size }, () => new Array(this.size).fill(0));
 
   constructor() {
-    this.setRandomTile();
-    this.setRandomTile();
+    this.#setRandomTile();
+    this.#setRandomTile();
   }
 
   /**
@@ -116,87 +121,75 @@ class Game {
   update(key) {
     if (this.#state !== GameState.Playing) return;
 
-    if (!this.isWin() && this.isLoss()) {
+    if (!this.#isWin() && this.#isLoss()) {
       this.#state = GameState.Loss;
       return;
     }
 
     // @ts-ignore
-    let { x_start, y_start, x_step, y_step } = this.#dir[key];
+    const { x_start, y_start, x_step, y_step } = this.#dir[key];
     let moved = false;
 
-    // TODO: Maybe find a way to reduce the number of checks required
-    /* FIXME: This situation:
-            4 4 4
-        When <- is pressed should show:
-            8 4
-        But it shows
-            4 8
-        Also this situation:
-            2 2 2 2
-        Turns into:
-            4 - 4 -
-        Maybe check pairings first
-    */
-    for (let i = x_start; i >= 0 && i < this.size; i += x_step || 1) {
-      for (let j = y_start; j >= 0 && j < this.size; j += y_step || 1) {
-        // If empty, skip
+    // Avoid double mergers
+    let merged = Array.from({ length: this.size }, () =>
+      new Array(this.size).fill(false)
+    );
+
+    for (let i = x_start; 0 <= i && i < this.size; i += x_step || 1) {
+      for (let j = y_start; 0 <= j && j < this.size; j += y_step || 1) {
         if (this.data[i][j] === 0) continue;
 
-        // Find next empty tile
-        let next = { x: i, y: j };
+        let current = { x: i, y: j };
+        let next = { x: i - x_step, y: j - y_step };
 
         while (
-          next.x + x_step >= 0 &&
-          next.x + x_step < this.size &&
-          next.y + y_step >= 0 &&
-          next.y + y_step < this.size &&
-          this.data[next.x + x_step][next.y + y_step] === 0
+          0 <= next.x &&
+          next.x < this.size &&
+          0 <= next.y &&
+          next.y < this.size
         ) {
-          next.x += x_step;
-          next.y += y_step;
+          // Move to next empty space
+          if (this.data[next.x][next.y] === 0) {
+            this.data[next.x][next.y] = this.data[current.x][current.y];
+            this.data[current.x][current.y] = 0;
+            moved = true;
+          }
+
+          // Merge if possible
+          if (
+            !merged[current.x][current.y] &&
+            !merged[next.x][next.y] &&
+            this.data[next.x][next.y] === this.data[current.x][current.y]
+          ) {
+            this.score +=
+              this.data[next.x][next.y] + this.data[current.x][current.y];
+            this.data[next.x][next.y] += this.data[current.x][current.y];
+            this.data[current.x][current.y] = 0;
+            merged[next.x][next.y] = true;
+            moved = true;
+            break;
+          }
+
+          current = { ...next };
+          next.x -= x_step;
+          next.y -= y_step;
         }
-
-        // Is next tile the same number? Then add them up
-        let pair = { x: next.x + x_step, y: next.y + y_step };
-
-        if (
-          pair.x >= 0 &&
-          pair.x < this.size &&
-          pair.y >= 0 &&
-          pair.y < this.size &&
-          this.data[pair.x][pair.y] === this.data[i][j]
-        ) {
-          this.score += this.data[pair.x][pair.y] + this.data[i][j];
-          this.data[pair.x][pair.y] += this.data[i][j];
-          this.data[i][j] = 0;
-          moved = true;
-          continue;
-        }
-
-        // Don't move if not necessary
-        if (next.x === i && next.y === j) continue;
-
-        // Else, just move the tile
-        this.data[next.x][next.y] = this.data[i][j];
-        this.data[i][j] = 0;
-        moved = true;
       }
     }
 
-    if (this.isWin()) {
+    if (this.#isWin()) {
       this.#state = GameState.Win;
       return;
     }
 
-    if (moved && this.isEmptyTileAvailable()) this.setRandomTile();
+    if (moved && this.#isEmptyTileAvailable()) this.#setRandomTile();
   }
 
   /**
    * Select a random empty tile and set its value to 2 or 4. There must be at
    * least one empty tile available
    */
-  setRandomTile() {
+  #setRandomTile() {
     let i = 0;
     let j = 0;
 
@@ -212,7 +205,7 @@ class Game {
    * Check if 2048 is reached
    * @returns {boolean}
    */
-  isWin() {
+  #isWin() {
     return this.data.find((row) => row.includes(2048)) !== undefined;
   }
 
@@ -220,15 +213,15 @@ class Game {
    * Check if no more moves are available
    * @returns {boolean}
    */
-  isLoss() {
-    return !this.isEmptyTileAvailable() && !this.areAddMovesAvailable();
+  #isLoss() {
+    return !this.#isEmptyTileAvailable() && !this.#areAddMovesAvailable();
   }
 
   /**
    * Check if there is an empty tile in the board
    * @returns {boolean}
    */
-  isEmptyTileAvailable() {
+  #isEmptyTileAvailable() {
     return this.data.find((row) => row.includes(0)) !== undefined;
   }
 
@@ -236,7 +229,7 @@ class Game {
    * Check if there are tiles that can be added up in any of the four directions
    * @returns {boolean}
    */
-  areAddMovesAvailable() {
+  #areAddMovesAvailable() {
     for (let i = 0; i < this.size; i++) {
       for (let j = 0; j < this.size; j++) {
         if (
@@ -253,6 +246,7 @@ class Game {
 }
 
 /**
+ * Update the view of the page
  * @param {Game} game
  */
 function updateBoardView(game) {
@@ -315,10 +309,13 @@ window.addEventListener("keydown", (e) => {
   updateBoardView(game);
 });
 
-restart_button.addEventListener("click", (ev) => {
+restart_button.addEventListener("click", (_) => {
   game = new Game();
   updateBoardView(game);
 });
 
+document.addEventListener("DOMContentLoaded", (_) => {
+  updateBoardView(game);
+});
+
 let game = new Game();
-updateBoardView(game);
