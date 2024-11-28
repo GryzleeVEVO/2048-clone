@@ -10,14 +10,6 @@
  * by other similar games. You can play the original at https://play2048.co/.
  */
 
-/* TODO
-  [ ] Add board animations
-  [ ] Save state in local storage
-  [ ] A more elegant way to update board
-  [ ] Allow for boards with different sizes
-  [ ] Fix styles so that it zooms in and out properly (well, fix styles in general)
-*/
-
 "use strict";
 
 // Colors have been ripped from the classic version of 2048's CSS style
