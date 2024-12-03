@@ -17,7 +17,6 @@ using basic JS, without using frameworks.
 - [ ] Fix styles so that it zooms in and out properly (well, fix styles in
     general)
 
-
 ## License
 
 This software is licensed under the MIT license.
